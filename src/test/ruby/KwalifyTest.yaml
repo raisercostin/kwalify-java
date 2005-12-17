@@ -1,0 +1,7 @@
+name: classnames
+classnames:
+  - YamlParserTest
+  - RuleTest
+  - ValidatorTest
+  - MetaValidatorTest
+  - MainTest

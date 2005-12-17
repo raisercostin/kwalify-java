@@ -1,0 +1,133 @@
+package kwalify;
+
+import junit.framework.TestCase;
+import junit.textui.TestRunner;
+import java.util.*;
+import java.text.*;
+
+/**
+ *  @revision    $Rev: 2 $
+ *  @release     $Release: 0.5.0 $
+ *  @copyright   copyright(c) 2005 kuwata-lab all rights reserved.
+ */
+public class MetaValidatorTest extends TestCase {
+
+    private String _schema;
+    private String _meta_msg;
+    private String _rule_msg;
+
+
+    private void doMetaTest() throws Exception {
+        if (_meta_msg == null) {
+            return;
+        }
+        YamlParser parser = new YamlParser(_schema);
+        Object schema = parser.parse();
+        Validator meta_validator = MetaValidator.instance();
+        List errors = meta_validator.validate(schema);
+        //System.out.println("*** debug: schema = " + Util.inspect(schema));
+        //System.out.println("*** debug: errors = " + Util.inspect(errors));
+        parser.setErrorsLineNumber(errors);
+        Collections.sort(errors);
+        StringBuffer sb = new StringBuffer();
+        for (Iterator it = errors.iterator(); it.hasNext(); ) {
+            ValidationException ex = (ValidationException)it.next();
+            String s = errorToString(ex);
+            sb.append(s);
+        }
+        String actual = sb.toString();
+        assertEquals(_meta_msg, actual);
+    }
+
+
+    private void doRuleTest() throws Exception {
+        if (_rule_msg == null) {
+            return;
+        }
+        String actual = null;
+        YamlParser parser = new YamlParser(_schema);
+        Object schema = parser.parse();
+        try {
+            new Rule(schema);
+        } catch (SchemaException ex) {
+            actual = errorToString(ex);
+        }
+        assertEquals(_rule_msg, actual);
+    }
+
+
+    MessageFormat __format = new MessageFormat("{0}: [{1}] {2}\n");
+
+
+    private String errorToString(BaseException ex) {
+        String symbol = ex.getErrorSymbol();
+        String path   = ex.getPath();
+        String mesg   = ex.getMessage();
+        Object[] params = { convertSymbol(symbol), path, mesg };
+        String s = __format.format(params);
+        return s;
+    }
+
+
+    private String convertSymbol(String error_symbol) {
+        final int symbol_width = 20;
+        StringBuffer sb = new StringBuffer();
+        sb.append(":");
+        String[] array = error_symbol.split("\\.");
+        for (int i = 0; i < array.length; i++) {
+            if (i > 0) {
+                sb.append('_');
+            }
+            sb.append(array[i]);
+        }
+        for (int i = symbol_width - sb.length(); i > 0; i--) {
+            sb.append(' ');
+        }
+        return sb.toString();
+    }
+
+
+    public static void main(String[] args) {
+        TestRunner.run(MetaValidatorTest.class);
+    }
+
+    //-----
+
+<%  docs = context[:docs] %>
+<%  for doc in docs do %>
+    /** <%= doc['desc'] %> */
+<%    if doc['meta-msg'] then %>
+    public void testMeta_<%= doc['name'].split(/_/).collect{|e| e.capitalize}.join %>() throws Exception {
+        _schema = ""
+<%      doc['schema'].each_line do |line| %>
+            + <%= line.inspect %>
+<%      end %>
+            ;
+        _meta_msg = ""
+<%      doc['meta-msg'].each_line do |line| %>
+            + <%= line.inspect %>
+<%      end %>
+            ;
+        doMetaTest();
+    }
+<%    end %>
+<%    if doc['rule-msg'] then %>
+    public void testRule_<%= doc['name'].split(/_/).collect{|e| e.capitalize}.join  %>() throws Exception {
+        _schema = ""
+<%      doc['schema'].each_line do |line| %>
+            + <%= line.inspect %>
+<%      end %>
+            ;
+        _rule_msg = ""
+<%      doc['rule-msg'].each_line do |line| %>
+            + <%= line.inspect %>
+<%      end %>
+            ;
+        doRuleTest();
+    }
+<%    end %>
+
+<%  end %>
+    //-----
+
+}

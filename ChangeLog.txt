@@ -1,0 +1,14 @@
+.=title:	ChangeLog
+.?version:	$Rev: 3 $
+.?lastupdate:	$Date: 2005-12-17 13:27:45 +0900 (Sat, 17 Dec 2005) $
+
+.: Rev.3 (2005-12-17) (release 0.5.0)
+	.- use java.util.IdentityHashMap
+	.- add Util.parseCommandOptions()
+	.- add users-guide and examples
+
+.: Rev.2 (2005-12-15)
+	.- new class MetaValidator added
+
+.: Rev.1 (2005-12-11)
+	.- initial commit

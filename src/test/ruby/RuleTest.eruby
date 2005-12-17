@@ -1,0 +1,63 @@
+package kwalify;
+
+import junit.framework.TestCase;
+import junit.textui.TestRunner;
+import kwalify.*;
+import java.util.*;
+
+/**
+ *  @revision    $Rev: 1 $
+ *  @release     $Release: 0.5.0 $
+ *  @copyright   copyright(c) 2005 kuwata-lab all rights reserved.
+ */
+public class RuleTest extends TestCase {
+
+    private String _input;
+    //private String _expected;
+    private Class  _exception_class;
+
+    private void doTest() throws Exception {
+        YamlParser parser = new YamlParser(_input);
+        Map schema = (Map)parser.parse();
+        Rule rule;
+        if (_exception_class == null) {
+            rule = new Rule(schema);
+        } else {
+            try {
+                rule = new Rule(schema);
+                fail(_exception_class.getName() + " is expected but not thrown.");
+            } catch (Exception ex) {
+                if (ex.getClass() == _exception_class) {
+                    // OK
+                } else {
+                    throw ex;
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        TestRunner.run(RuleTest.class);
+    }
+
+    //-----
+
+<%  docs = context[:docs] %>
+<%  docs.each do |doc| %>
+    /** <%= doc['desc'] %> */
+    public void test<%= doc['name'].capitalize %>() throws Exception {
+        _input = ""
+<%    doc['input'].each_line do |line| %>
+            + <%= line.inspect %>
+<%    end %>
+            ;
+<%    if doc['exception'] %>
+        _exception_class = <%= doc['exception'] %>.class;
+<%    end %>
+        doTest();
+    }
+
+<%  end %>
+    //-----
+
+}

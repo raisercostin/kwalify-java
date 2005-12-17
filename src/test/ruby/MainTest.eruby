@@ -1,0 +1,248 @@
+package kwalify;
+
+import junit.framework.TestCase;
+import junit.textui.TestRunner;
+import kwalify.*;
+import java.util.*;
+import java.text.*;
+import java.lang.reflect.*;
+import java.io.*;
+
+/**
+ *  @revision    $Rev: 3 $
+ *  @release     $Release: 0.5.0 $
+ *  @copyright   copyright(c) 2005 kuwata-lab all rights reserved.
+ */
+public class MainTest extends TestCase {
+
+    private String _command = "kwalify";
+    private String _name;
+    private String[] _args;
+    private String _inspect;
+    private Class _exception_class;
+    private String _error_symbol;
+    private String _expected;
+    private String _schema;
+    private String _document;
+    private String _valid;
+    private String _valid_out;
+    private String _invalid;
+    private String _invalid_out;
+
+    private static String __dirname = "tmp.dir";
+
+    static {
+        File tmpdir = new File(__dirname);
+        if (! tmpdir.exists()) {
+            tmpdir.mkdir();
+        }
+    }
+
+    private void doValidationTest() throws Exception {
+        String schema_filename  = null;
+        String valid_filename   = null;
+        String invalid_filename = null;
+        try {
+            if (_schema == null) {
+                throw new Exception("schema is not defined.");
+            }
+            schema_filename = _name + ".schema";
+            Util.writeFile(schema_filename, _schema);
+            //
+            if (_valid == null) {
+                throw new Exception("valid is not defined.");
+            }
+            valid_filename = _name + ".valid";
+            Util.writeFile(valid_filename, _valid);
+            //
+            if (_invalid == null) {
+                throw new Exception("invalid is not defined.");
+            }
+            invalid_filename = _name + ".invalid";
+            Util.writeFile(invalid_filename, _invalid);
+            //
+            Main main;
+            String output;
+            main = new Main(_command);
+            _args = new String[] { "-lf", schema_filename, valid_filename };
+            output = main.execute(_args);
+            assertEquals(_valid_out, output);
+            //
+            main = new Main(_command);
+            _args = new String[] { "-lf", schema_filename, invalid_filename };
+            output = main.execute(_args);
+            assertEquals(_invalid_out, output);
+        } finally {
+            String[] filenames = { schema_filename, valid_filename, invalid_filename };
+            for (int i = 0; i < filenames.length; i++) {
+                Util.moveFile(filenames[i], __dirname);
+            }
+        }
+    }
+
+    private void doExecuteTest() throws Exception {
+        if (_args == null) {
+            throw new Exception("args is required when method is 'execute'.");
+        }
+        if (_expected == null) {
+            throw new Exception("expected is required when method is 'execute'.");
+        }
+        //
+        if (_schema != null) {
+            Util.writeFile(_name + ".schema", _schema);
+        }
+        if (_document != null) {
+            Util.writeFile(_name + ".document", _document);
+        }
+        //
+        try {
+            Main main = new Main(_command);
+            String actual = main.execute(_args);
+            if (_exception_class == null) {
+                assertEquals(_expected, actual);
+            } else {
+                fail("exception " + _exception_class.getName() + " expected but not throwned.");
+            }
+        } catch (Exception ex) {
+            if (ex.getClass() == _exception_class) {  // OK
+                if (ex instanceof CommandOptionException) {
+                    assertEquals(_error_symbol, ((CommandOptionException)ex).getErrorSymbol());
+                }
+            } else {  // NG
+                throw ex;
+            }
+        } finally {
+            if (_schema != null) {
+                Util.moveFile(_name + ".schema", __dirname);
+            }
+            if (_document != null) {
+                Util.moveFile(_name + ".document", __dirname);
+            }
+        }
+    }
+
+    private void doParseOptionsTest() throws Exception {
+        if (_inspect != null) {
+            try {
+                Main main = new Main(_command);
+                String[] filenames = invokeParseOptions(main, _args);
+                //String[] filenames = main.parseOptions(_args);
+                StringBuffer sb = new StringBuffer();
+                sb.append(main.inspect());
+                sb.append("filenames:\n");
+                for (int i = 0; i < filenames.length; i++) {
+                    sb.append("  - ").append(filenames[i]).append('\n');
+                }
+                String actual = sb.toString();
+                if (_exception_class == null) {
+                    assertEquals(_inspect, actual);
+                } else {
+                    fail("exception " + _exception_class.getName() + " expected but not happened.");
+                }
+            } catch (Exception ex) {
+                if (ex instanceof InvocationTargetException) {
+                    ex = (Exception)ex.getCause();
+                }
+                if (ex.getClass() == _exception_class) {
+                    // OK
+                    if (ex instanceof CommandOptionException) {
+                        assertEquals(_error_symbol, ((CommandOptionException)ex).getErrorSymbol());
+                    }
+                } else {
+                    // NG
+                    throw ex;
+                }
+            }
+        }
+    }
+
+
+    private String[] invokeParseOptions(Main main, String[] args) throws Exception {
+        Class[] argtypes = { new String[] {}.getClass() };
+        Method method = Main.class.getDeclaredMethod("parseOptions", argtypes);
+        method.setAccessible(true);
+        Object result = method.invoke(main, new Object[] { args });
+        String[] filenames = (String[])result;
+        return filenames;
+    }
+
+
+/*    
+    private Object invokePrivateMethod(Object obj, String method_name, Class[] argtypes, Object[] argvalues) throws Exception {
+        Method method = obj.getClass().getDeclaredMethod(method_name, argtypes);
+        method.setAccessible(true);
+        Object result = method.invoke(obj, argvalues);
+        return result;
+    }
+*/
+
+    public static void main(String[] args) {
+        TestRunner.run(MainTest.class);
+    }
+
+    //-----
+
+<%  docs = context[:docs] %>
+<%  docs.each do |doc| %>
+    /** <%= doc['desc'] %> */
+    public void test<%= doc['name'].capitalize %>() throws Exception {
+        _name = <%= doc['name'].inspect %>;
+<%    if doc['args'] %>
+        _args = new String[] {<%= doc['args'].collect{|item| item.inspect}.join(", ") %>};
+<%    end %>
+<%    if doc['inspect'] then %>
+        _inspect = ""
+<%      doc['inspect'].each_line do |line| %>
+            + <%= line.inspect %>
+<%      end %>
+            ;
+<%    end %>
+<%    if doc['exception'] then %>
+        _exception_class = <%= doc['exception'] %>.class;
+<%    end %>
+<%    if doc['error_symbol'] then %>
+        _error_symbol = <%= doc['error_symbol'].inspect %>;
+<%    end %>
+<%    if doc['expected'] then %>
+<%       doc['expected'] << "\n" unless doc['expected'].empty? || doc['expected'][-1] == ?\n %>
+        _expected = <%= doc['expected'].inspect %>;
+<%    end %>
+<%    if doc['schema'] then %>
+        _schema = <%= doc['schema'].inspect %>;
+<%    end %>
+<%    if doc['document'] then %>
+        _document = <%= doc['document'].inspect %>;
+<%    end %>
+<%    if doc['valid'] then %>
+        _valid = <%= doc['valid'].inspect %>;
+<%    end %>
+<%    if doc['invalid'] then %>
+        _invalid = <%= doc['invalid'].inspect %>;
+<%    end %>
+<%    if doc['valid-out'] then %>
+        _valid_out = <%= doc['valid-out'].inspect %>;
+<%    end %>
+<%    if doc['invalid-out'] then %>
+        _invalid_out = <%= doc['invalid-out'].inspect %>;
+<%    end %>
+<%    case doc['method'] %>
+<%    when 'parseOptions' %>
+        doParseOptionsTest();
+<%    when 'execute' %>
+<%      raise "*** #{doc['name']}: args is not defined."    unless doc['args'] %>
+<%      raise "*** #{doc['name']}: expected is not defined."  unless doc['expected'] %>
+        doExecuteTest();
+<%    when 'validation' %>
+<%      raise "*** #{doc['name']}: schema is not defined."  unless doc['schema'] %>
+<%      raise "*** #{doc['name']}: valid is not defined."   unless doc['valid'] %>
+<%      raise "*** #{doc['name']}: invalid is not defined." unless doc['invalid'] %>
+        doValidationTest();
+<%    else %>
+<%      raise "*** #{doc['method']}: invalid method name." %>
+<%    end %>
+    }
+
+<%  end %>
+    //-----
+
+}

@@ -1,0 +1,70 @@
+package kwalify;
+
+import junit.framework.TestCase;
+import junit.textui.TestRunner;
+import kwalify.*;
+import java.util.*;
+
+/**
+ *  @revision    $Rev: 2 $
+ *  @release     $Release: 0.5.0 $
+ *  @copyright   copyright(c) 2005 kuwata-lab all rights reserved.
+ */
+public class YamlParserTest extends TestCase {
+
+    private String _input;
+    private String _expected;
+    private Class  _exception_class;
+
+    private void doTest() throws Exception {
+        YamlParser parser = new YamlParser(_input);
+        Object data;
+        String actual;
+        if (_exception_class == null) {
+            data = parser.parse();
+            actual = Util.inspect(data);
+            assertEquals(_expected, actual);
+        } else {
+            try {
+                data = parser.parse();
+                fail(_exception_class.getName() + " is expected but not thrown.");
+            } catch (Exception ex) {
+                if (ex.getClass() == _exception_class) {
+                    // OK
+                } else {
+                    throw ex;
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        TestRunner.run(YamlParserTest.class);
+    }
+
+    //-----
+
+<%  docs = context[:docs] %>
+<%  docs.each do |doc| %>
+    /** <%= doc['desc'] %> */
+    public void test<%= doc['name'].capitalize %>() throws Exception {
+        _input = ""
+<%    doc['input'].each_line do |line| %>
+            + <%= line.inspect %>
+<%    end %>
+            ;
+        _expected = ""
+<%    doc['expected'].each_line do |line| %>
+            + <%= line.inspect %>
+<%    end %>
+            ;
+<%    if doc['exception'] %>
+        _exception_class = <%= doc['exception'] %>.class;
+<%    end %>
+        doTest();
+    }
+
+<%  end %>
+    //-----
+
+}

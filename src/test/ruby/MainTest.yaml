@@ -1,0 +1,755 @@
+##
+## $Rev: 3 $
+## $Release: 0.5.0 $
+## copyright(c) 2005 kuwata-lab all rights reserved.
+##
+---
+name:  parseOptions1
+desc:  test Main#parseOptions()
+method: parseOptions
+args: [ -hvsmtlDf, schema.yaml, document.yaml, document2.yaml ]
+inspect: |
+  command       : kwalify
+  flag_help     : true
+  flag_version  : true
+  flag_silent   : true
+  flag_meta     : true
+  flag_untabify : true
+  flag_linenum  : true
+  flag_debug    : true
+  schema_filename : schema.yaml
+  properties:
+  filenames:
+    - document.yaml
+    - document2.yaml
+#
+---
+name:  parseOptions2
+desc:  -ffilename
+method: parseOptions
+args: [ -lfschema.yaml]
+inspect: |
+  command       : kwalify
+  flag_help     : false
+  flag_version  : false
+  flag_silent   : false
+  flag_meta     : false
+  flag_untabify : false
+  flag_linenum  : true
+  flag_debug    : false
+  schema_filename : schema.yaml
+  properties:
+  filenames:
+#
+---
+name:  parseOptions3
+desc:  "'--help' is equal to '-h'"
+method: parseOptions
+args:  [ --help, document.yaml ]
+inspect: |
+  command       : kwalify
+  flag_help     : true
+  flag_version  : false
+  flag_silent   : false
+  flag_meta     : false
+  flag_untabify : false
+  flag_linenum  : false
+  flag_debug    : false
+  schema_filename : null
+  properties:
+    help: true
+  filenames:
+    - document.yaml
+#
+---
+name:  optionError1
+desc:  invalid command-line option
+method: parseOptions
+args:  [ -hvi ]
+inspect: '*'
+exception*:
+  ruby: CommandOptionError
+  java: CommandOptionException
+message: "-i: invalid command option."
+error_symbol*:
+  ruby: !ruby/sym :command_option_invalid
+  java: command.option.invalid
+#
+---
+name:  optionError2
+desc:  no argument of '-f'
+method: parseOptions
+args:  [ -f ]
+inspect: '*'
+exception*:
+  ruby: CommandOptionError
+  java: CommandOptionException
+message: "-f: schema filename is required."
+error_symbol*:
+  ruby: !ruby/sym :command_option_noschema
+  java: command.option.noschema
+#
+##---
+##name:  optionError3
+##desc:  invalid property
+##method: parseOptions
+##args:  [ --foo@var ]
+##inspect: '*'
+##exception*:
+##  ruby: CommandOptionError
+##  #java: CommandOptionException
+##message: "'--foo@var': invalid property."
+##error_symbol*:
+##  ruby: !ruby/sym :command_property_invalid
+##  #java: command.property.invalid
+---
+name:  optionError4
+desc:  action required
+method: execute
+args:  [ document.yaml ]
+inspect: '*'
+expected: |
+exception*:
+  ruby: CommandOptionError
+  java: CommandOptionException
+message: "command-line option '-f' or '-m' required."
+error_symbol*:
+  ruby: !ruby/sym :command_option_noschema
+  java: command.option.noaction
+#
+---
+name:  version
+desc:  option '-v'
+method: execute
+args:  [ -vt, document.yaml ]
+expected: |
+  0.0.0
+#
+---
+name:  help
+desc:  option '-h'
+method: execute
+args:  [ -hD, document.yaml ]
+expected: |
+  Usage1: kwalify [-hvstl] -f schema.yaml document.yaml [document2.yaml ...]
+  Usage2: kwalify [-hvstl] -m schema.yaml [schema2.yaml ...]
+    -h, --help      :  help
+    -v              :  version
+    -s              :  silent
+    -f schema.yaml  :  schema definition file
+    -m              :  meta-validation mode
+    -t              :  expand tab character automatically
+    -l              :  show linenumber when errored (experimental)
+#
+---
+name:  silent1
+desc:  option '-s' (valid)
+method: execute
+args:  [ -sf, silent1.schema, silent1.document ]
+expected: |
+schema: |
+  type:   seq
+  sequence:
+    - type:   str
+document: |
+  - foo
+  - bar
+  - baz
+#
+---
+name:  silent2
+desc:  option '-s' (invalid)
+method: execute
+args:  [ -sf, silent2.schema, silent2.document ]
+expected: |
+  silent2.document#1: INVALID
+    - [/1] '123': not a string.
+    - [/2] 'true': not a string.
+schema: |
+  type:   seq
+  sequence:
+    - type:   str
+document: |
+  - foo
+  - bar
+  - baz
+  ---
+  - foo
+  - 123
+  - true
+#
+---
+name:  untabify
+desc:  option '-t'
+method: execute
+args:  [ -tf, untabify.schema, untabify.document ]
+expected: |
+  untabify.document#0: valid.
+schema: |
+        type:		seq
+        sequence:
+          -	type: map
+        	mapping:
+          	   "key":
+        	  	type: text
+        	        required:	yes
+        	   "value":
+        	        type: any
+        	       	required:  yes
+document: |
+        #
+        	- key: foo
+        	  value: 123
+                - key: bar
+          	  value: [a, b, c]
+#
+---
+name:  stream
+desc:  stream document
+method: validation
+schema: |
+  type:   seq
+  sequence:
+    - type:   str
+valid: |
+   ---
+   - foo
+   - bar
+   - baz
+   ---
+   - aaa
+   - bbb
+   - ccc
+valid-out: |
+  stream.valid#0: valid.
+  stream.valid#1: valid.
+invalid: |
+  ---
+  - foo
+  - 123
+  - baz
+  ---
+  - aaa
+  - bbb
+  - true
+invalid-out: |
+  stream.invalid#0: INVALID
+    - (line 3) [/1] '123': not a string.
+  stream.invalid#1: INVALID
+    - (line 8) [/2] 'true': not a string.
+#
+---
+name:  meta1
+desc:  meta validation (valid)
+method: execute
+args:  [ -m, meta1.schema ]
+schema: |
+  type:   seq
+  sequence:
+    - type:   str
+document: |
+expected: |
+  meta1.schema: ok.
+#
+---
+name:  meta2
+desc:  meta validation (invalid)
+method: execute
+args:  [ -m, meta2.schema ]
+schema: |
+  type:   map
+  sequence:
+    - type:   str
+document: |
+expected: |
+  meta2.schema: NG!
+    - [/] type 'map' requires 'mapping:'.
+    - [/] 'sequence:': not available with mapping.
+#
+
+###
+### user's guide
+###
+---
+name: validation01
+desc: basic validation
+method: validation
+schema: |
+  type:   seq
+  sequence:
+    - type:   str
+valid: |
+  - foo
+  - bar
+  - baz
+valid-out: |
+  validation01.valid#0: valid.
+invalid: |
+  - foo
+  - 123
+  - baz
+invalid-out: |
+  validation01.invalid#0: INVALID
+    - (line 2) [/1] '123': not a string.
+#
+---
+name: validation02
+desc: basic validation
+method: validation
+schema: |
+  type:       map
+  mapping:
+    name:
+      type:      str
+      required:  yes
+    email:
+      type:      str
+      pattern:   /@/
+    age:
+      type:      int
+    birth:
+      type:      date
+valid: |
+  name:   foo
+  email:  foo@mail.com
+  age:    20
+  birth:  1985-01-01
+valid-out: |
+  validation02.valid#0: valid.
+invalid: |
+  name:   foo
+  email:  foo(at)mail.com
+  age:    twenty
+  birth:  Jun 01, 1985
+invalid-out: |
+  validation02.invalid#0: INVALID
+    - (line 2) [/email] 'foo(at)mail.com': not matched to pattern /@/.
+    - (line 3) [/age] 'twenty': not a integer.
+    - (line 4) [/birth] 'Jun 01, 1985': not a date.
+#
+---
+name: validation03
+desc: sequence of mapping
+method: validation
+schema: |
+  type:      seq
+  sequence:
+    - type:      map
+      mapping:
+        name:
+          type:      str
+          required:  true
+        email:
+          type:      str
+valid: |
+  - name:   foo
+    email:  foo@mail.com
+  - name:   bar
+    email:  bar@mail.net
+  - name:   baz
+    email:  baz@mail.org
+valid-out: |
+  validation03.valid#0: valid.
+invalid: |
+  - name:   foo
+    email:  foo@mail.com
+  - naem:   bar
+    email:  bar@mail.net
+  - name:   baz
+    mail:   baz@mail.org
+invalid-out: |
+  validation03.invalid#0: INVALID
+    - (line 3) [/1] key 'name:' is required.
+    - (line 3) [/1/naem] key 'naem:' is undefined.
+    - (line 6) [/2/mail] key 'mail:' is undefined.
+#
+---
+name: validation04
+desc: mapping of sequence
+method: validation
+schema: |
+  type:      map
+  mapping:
+    company:
+      type:      str
+      required:  yes
+    email:
+      type:      str
+    employees:
+      type:      seq
+      sequence:
+        - type:    map
+          mapping:
+            code:
+              type:      int
+              required:  yes
+            name:
+              type:      str
+              required:  yes
+            email:
+              type:      str
+valid: |
+  company:    Kuwata lab.
+  email:      webmaster@kuwata-lab.com
+  employees:
+    - code:   101
+      name:   foo
+      email:  foo@kuwata-lab.com
+    - code:   102
+      name:   bar
+      email:  bar@kuwata-lab.com
+valid-out: |
+  validation04.valid#0: valid.
+invalid: |
+  company:    Kuwata Lab.
+  email:      webmaster@kuwata-lab.com
+  employees:
+    - code:   A101
+      name:   foo
+      email:  foo@kuwata-lab.com
+    - code:   102
+      name:   bar
+      mail:   bar@kuwata-lab.com
+invalid-out: |
+  validation04.invalid#0: INVALID
+    - (line 4) [/employees/0/code] 'A101': not a integer.
+    - (line 9) [/employees/1/mail] key 'mail:' is undefined.
+#
+---
+name: validation05
+desc: rule and entry
+method: validation
+schema: |
+  type:      seq                                # new rule
+  sequence:
+    - 
+      type:      map                            # new rule
+      mapping:
+        name:
+          type:       str                       # new rule
+          required:   yes
+        email:
+          type:       str                       # new rule
+          required:   yes
+          pattern:    /@/
+        password:
+          type:       str                       # new rule
+          length:     { max: 16, min: 8 }
+        age:
+          type:       int                       # new rule
+          range:      { max: 30, min: 18 }
+          # or assert: 18 <= val && val <= 30
+        blood:
+          type:       str                       # new rule
+          enum:
+            - A
+            - B
+            - O
+            - AB
+        birth:
+          type:       date                      # new rule
+        memo:
+          type:       any                       # new rule
+valid: |
+  - name:     foo
+    email:    foo@mail.com
+    password: xxx123456
+    age:      20
+    blood:    A
+    birth:    1985-01-01
+  - name:     bar
+    email:    bar@mail.net
+    age:      25
+    blood:    AB
+    birth:    1980-01-01
+valid-out: |
+  validation05.valid#0: valid.
+invalid: |
+  - name:     foo
+    email:    foo(at)mail.com
+    password: xxx123
+    age:      twenty
+    blood:    a
+    birth:    1985-01-01
+  - given-name:  bar
+    family-name: Bar
+    email:    bar@mail.net
+    age:      15
+    blood:    AB
+    birth:    1980/01/01
+invalid-out*:
+  ruby: |
+    validation05.invalid#0: INVALID
+      - (line 2) [/0/email] 'foo(at)mail.com': not matched to pattern /@/.
+      - (line 3) [/0/password] 'xxx123': too short (length 6 < min 8).
+      - (line 4) [/0/age] 'twenty': not a integer.
+      - (line 5) [/0/blood] 'a': invalid blood value.
+      - (line 7) [/1/given-name] key 'given-name:' is undefined.
+      - (line 7) [/1] key 'name:' is required.
+      - (line 8) [/1/family-name] key 'family-name:' is undefined.
+      - (line 10) [/1/age] '15': too small (< min 18).
+      - (line 12) [/1/birth] '1980/01/01': not a date.
+  java: |
+    validation05.invalid#0: INVALID
+      - (line 2) [/0/email] 'foo(at)mail.com': not matched to pattern /@/.
+      - (line 3) [/0/password] 'xxx123': too short (length 6 < min 8).
+      - (line 4) [/0/age] 'twenty': not a integer.
+      - (line 5) [/0/blood] 'a': invalid blood value.
+      - (line 7) [/1] key 'name:' is required.
+      - (line 7) [/1/given-name] key 'given-name:' is undefined.
+      - (line 8) [/1/family-name] key 'family-name:' is undefined.
+      - (line 10) [/1/age] '15': too small (< min 18).
+      - (line 12) [/1/birth] '1980/01/01': not a date.
+#
+---
+name: validation06
+desc: unique constraint
+method: validation
+schema: |
+  type: seq
+  sequence:
+    - type:     map
+      required: yes
+      mapping:
+        name:
+          type:     str
+          required: yes
+          unique:   yes
+        email:
+          type:     str
+        groups:
+          type:     seq
+          sequence:
+            - type: str
+              unique:   yes
+valid: |
+  - name:   foo
+    email:  admin@mail.com
+    groups:
+      - users
+      - foo
+      - admin
+  - name:   bar
+    email:  admin@mail.com
+    groups:
+      - users
+      - admin
+  - name:   baz
+    email:  baz@mail.com
+    groups:
+      - users
+valid-out: |
+  validation06.valid#0: valid.
+invalid: |
+  - name:   foo
+    email:  admin@mail.com
+    groups:
+      - foo
+      - users
+      - admin
+      - foo
+  - name:   bar
+    email:  admin@mail.com
+    groups:
+      - admin
+      - users
+  - name:   bar
+    email:  baz@mail.com
+    groups:
+      - users
+invalid-out: |
+  validation06.invalid#0: INVALID
+    - (line 7) [/0/groups/3] 'foo': is already used at '/0/groups/0'.
+    - (line 13) [/2/name] 'bar': is already used at '/1/name'.
+#
+---
+name: validation12
+desc: json
+method: validation
+schema: |
+  { "type": "map",
+    "required": true,
+    "mapping": {
+      "name": {
+         "type": "str",
+         "required": true
+      },
+      "email": {
+         "type": "str"
+      },
+      "age": {
+         "type": "int"
+      },
+      "gender": {
+         "type": "str",
+         "enum": ["M", "F"]
+      },
+      "favorite": {
+         "type": "seq",
+         "sequence": [
+            { "type": "str" }
+         ]
+      }
+    }
+  }
+valid: |
+  { "name": "Foo",
+    "email": "foo@mail.com",
+    "age": 20,
+    "gender": "F",
+    "favorite": [
+       "football",
+       "basketball",
+       "baseball"
+    ]
+  }
+valid-out: |
+  validation12.valid#0: valid.
+invalid: |
+  { 
+    "mail": "foo@mail.com",
+    "age": twenty,
+    "gender": "X",
+    "favorite": [ 123, 456 ]
+  }
+invalid-out: |
+  validation12.invalid#0: INVALID
+    - (line 1) [/] key 'name:' is required.
+    - (line 2) [/mail] key 'mail:' is undefined.
+    - (line 3) [/age] 'twenty': not a integer.
+    - (line 4) [/gender] 'X': invalid gender value.
+    - (line 5) [/favorite/0] '123': not a string.
+    - (line 5) [/favorite/1] '456': not a string.
+#
+---
+name: validation13
+desc: anchor and alias
+method: validation
+schema: |
+  type:   seq
+  sequence:
+    - &employee
+      type:      map
+      mapping:
+       "given-name": &name
+          type:     str
+          required: yes
+       "family-name": *name
+       "post":
+          enum:
+            - exective
+            - manager
+            - clerk
+       "supervisor":  *employee
+valid: |
+  - &foo
+    given-name:    foo
+    family-name:   Foo
+    post:          exective
+  - &bar
+    given-name:    bar
+    family-name:   Bar
+    post:          manager
+    supervisor:    *foo
+  - given-name:    baz
+    family-name:   Baz
+    post:          clerk
+    supervisor:    *bar
+  - given-name:    zak
+    family-name:   Zak
+    post:          clerk
+    supervisor:    *bar
+valid-out: |
+  validation13.valid#0: valid.
+invalid: |
+  - &foo
+    #given-name:    foo
+    family-name:   Foo
+    post:          exective
+  - &bar
+    given-name:    bar
+    family-name:   Bar
+    post:          manager
+    supervisor:    *foo
+  - given-name:    baz
+    family-name:   Baz
+    post:          clerk
+    supervisor:    *bar
+  - given-name:    zak
+    family-name:   Zak
+    post:          clerk
+    supervisor:    *bar
+invalid-out: |
+  validation13.invalid#0: INVALID
+    - (line 1) [/0] key 'given-name:' is required.
+#
+---
+name: validation14
+desc: anchor and alias
+method: validation
+schema: |
+  type: map
+  mapping:
+    =:              # default rule
+      type: number
+      range: { max: 1, min: -1 }
+valid: |
+  value1: 0
+  value2: 0.5
+  value3: -0.9
+valid-out: |
+  validation14.valid#0: valid.
+invalid: |
+  value1: 0
+  value2: 1.1
+  value3: -2.0
+invalid-out: |
+  validation14.invalid#0: INVALID
+    - (line 2) [/value2] '1.1': too large (> max 1).
+    - (line 3) [/value3] '-2.0': too small (< min -1).
+#
+---
+name: validation15
+desc: anchor and alias
+method: validation
+schema: |
+  type: map
+  mapping:
+   "group":
+      type: map
+      mapping:
+       "name": &name
+          type: str
+          required: yes
+       "email": &email
+          type: str
+          pattern: /@/
+          required: no
+   "user":
+      type: map
+      mapping:
+       "name":
+          <<: *name             # merge
+          length: { max: 16 }   # override
+       "email":
+          <<: *email            # merge
+          required: yes         # add
+valid: |
+  group:
+    name: foo
+    email: foo@mail.com
+  user:
+    name: bar
+    email: bar@mail.com
+valid-out: |
+  validation15.valid#0: valid.
+invalid: |
+  group:
+    name: foo
+    email: foo@mail.com
+  user:
+    name: toooooo-looooong-name
+invalid-out: |
+  validation15.invalid#0: INVALID
+    - (line 4) [/user] key 'email:' is required.
+    - (line 5) [/user/name] 'toooooo-looooong-name': too long (length 21 > max 16).

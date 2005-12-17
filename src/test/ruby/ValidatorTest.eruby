@@ -1,0 +1,116 @@
+package kwalify;
+
+import junit.framework.TestCase;
+import junit.textui.TestRunner;
+import kwalify.*;
+import java.util.*;
+import java.text.*;
+
+/**
+ *  @revision    $Rev: 1 $
+ *  @release     $Release: 0.5.0 $
+ *  @copyright   copyright(c) 2005 kuwata-lab all rights reserved.
+ */
+public class ValidatorTest extends TestCase {
+
+    private String _schema;
+    private String _valid;
+    private String _invalid;
+    private String _error;
+
+    private void doTest() throws Exception {
+        YamlParser parser = new YamlParser(_schema);
+        Map schema = (Map)parser.parse();
+        Validator validator = new Validator(schema);
+        String actual;
+        if (_valid != null) {
+            actual = doValidate(validator, _valid);
+            assertEquals("", actual);
+        }
+        if (_invalid != null) {
+            actual = doValidate(validator, _invalid);
+            assertEquals(_error, actual);
+        }
+    }
+
+    private String doValidate(Validator validator, String input) throws Exception {
+        YamlParser parser = new YamlParser(input);
+        Object doc = parser.parse();
+        List errors = validator.validate(doc);
+        StringBuffer sb = new StringBuffer();
+        MessageFormat format = new MessageFormat("{0}: (line {1})[{2}] {3}\n");
+        if (errors != null) {
+            parser.setErrorsLineNumber(errors);
+            Collections.sort(errors);
+            for (Iterator it = errors.iterator(); it.hasNext(); ) {
+                ValidationException err = (ValidationException)it.next();
+                String symbol = convertSymbol(err.getErrorSymbol());
+                Object[] params = { symbol, new Integer(err.getLineNumber()), err.getPath(), err.getMessage() };
+                String s = format.format(params);
+                sb.append(s);
+            }
+        }
+        return sb.toString();
+    }
+
+    private String convertSymbol(String error_symbol) {
+        final int symbol_width = 20;
+        StringBuffer sb = new StringBuffer();
+        sb.append(":");
+        String[] array = error_symbol.split("\\.");
+        for (int i = 0; i < array.length; i++) {
+            if (i > 0) {
+                sb.append('_');
+            }
+            sb.append(array[i]);
+        }
+        for (int i = symbol_width - sb.length(); i > 0; i--) {
+            sb.append(' ');
+        }
+        return sb.toString();
+    }
+
+
+    public static void main(String[] args) {
+        TestRunner.run(ValidatorTest.class);
+    }
+
+    //-----
+
+<%  docs = context[:docs] %>
+<%  docs.each do |doc| %>
+    /** <%= doc['desc'] %> */
+    public void test<%= doc['name'].capitalize %>() throws Exception {
+        _schema = ""
+<%    doc['schema'].each_line do |line| %>
+            + <%= line.inspect %>
+<%    end %>
+            ;
+<%    if doc['valid'] then %>
+        _valid = ""
+<%      doc['valid'].each_line do |line| %>
+            + <%= line.inspect %>
+<%      end %>
+            ;
+<%    end %>
+<%    if doc['invalid'] then %>
+        _invalid = ""
+<%      doc['invalid'].each_line do |line| %>
+            + <%= line.inspect %>
+<%      end %>
+            ;
+<%    end %>
+<%    if doc['error'] then %>
+        _error = ""
+<%      doc['error'].each_line do |line| %>
+            + <%= line.inspect %>
+<%      end %>
+            ;
+<%    end %>
+        doTest();
+    }
+
+<%  end %>
+    //-----
+
+}
