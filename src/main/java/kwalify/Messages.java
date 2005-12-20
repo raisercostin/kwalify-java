@@ -1,5 +1,5 @@
 /*
- * @(#)Messages.java	$Rev: 3 $ $Release: 0.5.0 $
+ * @(#)Messages.java	$Rev: 4 $ $Release: 0.5.1 $
  *
  * copyright(c) 2005 kuwata-lab all rights reserved.
  */
@@ -7,13 +7,13 @@
 package kwalify;
 
 import java.util.ResourceBundle;
-import java.util.Locale;
+//import java.util.Locale;
 
 /**
  * set of utility methods around messages.
  *
- * @revision    $Rev: 3 $
- * @release     $Release: 0.5.0 $
+ * @revision    $Rev: 4 $
+ * @release     $Release: 0.5.1 $
  */
 public class Messages {
 

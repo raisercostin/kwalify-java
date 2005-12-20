@@ -1,7 +1,7 @@
 .=title:	README
 .?version:	$Rev: 3 $
 .?lastupdate:	$Date: 2005-12-17 13:27:45 +0900 (Sat, 17 Dec 2005) $
-.?release:	$Release$
+.?release:	$Release: 0.5.1 $
 
 
 .$ About Kwalify

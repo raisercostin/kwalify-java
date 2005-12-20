@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- $Rev$  $Release: 0.5.1 $  copyright(c) 2005 kuwata-lab all rights reserved. -->
+<project name="kwalify-java" default="compile" >
+  <description>a tiny schema validator for YAML and JSON.</description>
+
+  <!--** properties **-->
+  <property name="main.srcdir"  value="src/main/java" />
+  <property name="main.destdir" value="build/main" />
+  <property name="test.srcdir"  value="src/test/java" />
+  <property name="test.destdir" value="build/test" />
+  <property name="junit_jar"    value="lib/junit.jar" />
+
+  <!--** prepare **-->
+  <target name="prepare">
+    <mkdir dir="${main.destdir}" />
+    <mkdir dir="${test.destdir}" />
+  </target>
+
+  <!--** comile **-->
+  <target name="compile" depends="prepare">        
+    <javac srcdir="${main.srcdir}" destdir="${main.destdir}" target="1.4" source="1.4" />
+    <copy file="${main.srcdir}/kwalify/messages.properties" todir="${main.destdir}/kwalify" />
+  </target>
+
+  <!--** jar **-->
+  <target name="jar" depends="compile">
+    <jar destfile="kwalify.jar" basedir="${main.destdir}" />
+  </target>
+
+  <!--** compiletest **-->
+  <target name="compiletest" depends="compile">
+    <javac srcdir="${test.srcdir}" destdir="${test.destdir}" target="1.4" source="1.4">
+      <classpath path="${main.destdir}"/>
+    </javac>
+  </target>
+
+  <!--** test **-->
+  <target name="test" depends="compiletest">
+    <junit printsummary="yes" haltonfailure="yes">
+      <classpath>
+        <pathelement path="${main.destdir}" />
+        <pathelement path="${test.destdir}" />
+      </classpath>
+      <!--formatter type="plain"/-->
+      <!--
+      <test name="kwalify.YamlParserTest" />
+      <test name="kwalify.RuleTest" />
+      <test name="kwalify.ValidatorTest" />
+      <test name="kwalify.MetaValidatorTest" />
+      <test name="kwalify.MainTest" />
+      -->
+      <batchtest>
+        <fileset dir="${test.destdir}">
+          <include name="**/*Test.class" />
+          <exclude name="**/KwalifyTest.class" />
+        </fileset>
+      </batchtest>
+    </junit>
+  </target>
+
+  <!--** clean **-->
+  <target name="clean">
+    <delete dir="${destdir}" />
+  </target>
+
+</project>

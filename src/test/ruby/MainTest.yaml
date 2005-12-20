@@ -1,13 +1,13 @@
 ##
-## $Rev: 3 $
-## $Release: 0.5.0 $
+## $Rev: 4 $
+## $Release: 0.5.1 $
 ## copyright(c) 2005 kuwata-lab all rights reserved.
 ##
 ---
 name:  parseOptions1
 desc:  test Main#parseOptions()
 method: parseOptions
-args: [ -hvsmtlDf, schema.yaml, document.yaml, document2.yaml ]
+args: [ -hvsmtlEDf, schema.yaml, document.yaml, document2.yaml ]
 inspect: |
   command       : kwalify
   flag_help     : true
@@ -15,6 +15,7 @@ inspect: |
   flag_silent   : true
   flag_meta     : true
   flag_untabify : true
+  flag_emacs    : true
   flag_linenum  : true
   flag_debug    : true
   schema_filename : schema.yaml
@@ -35,6 +36,7 @@ inspect: |
   flag_silent   : false
   flag_meta     : false
   flag_untabify : false
+  flag_emacs    : false
   flag_linenum  : true
   flag_debug    : false
   schema_filename : schema.yaml
@@ -53,11 +55,32 @@ inspect: |
   flag_silent   : false
   flag_meta     : false
   flag_untabify : false
+  flag_emacs    : false
   flag_linenum  : false
   flag_debug    : false
   schema_filename : null
   properties:
     help: true
+  filenames:
+    - document.yaml
+#
+---
+name:  parseOptions4
+desc:  "'-E' turns on '-l'"
+method: parseOptions
+args:  [ -E, document.yaml ]
+inspect: |
+  command       : kwalify
+  flag_help     : false
+  flag_version  : false
+  flag_silent   : false
+  flag_meta     : false
+  flag_untabify : false
+  flag_emacs    : true
+  flag_linenum  : true
+  flag_debug    : false
+  schema_filename : null
+  properties:
   filenames:
     - document.yaml
 #
@@ -123,7 +146,7 @@ desc:  option '-v'
 method: execute
 args:  [ -vt, document.yaml ]
 expected: |
-  0.0.0
+  0.5.1
 #
 ---
 name:  help
@@ -131,8 +154,8 @@ desc:  option '-h'
 method: execute
 args:  [ -hD, document.yaml ]
 expected: |
-  Usage1: kwalify [-hvstl] -f schema.yaml document.yaml [document2.yaml ...]
-  Usage2: kwalify [-hvstl] -m schema.yaml [schema2.yaml ...]
+  Usage1: kwalify [-hvstlE] -f schema.yaml doc.yaml [doc2.yaml ...]
+  Usage2: kwalify [-hvstlE] -m schema.yaml [schema2.yaml ...]
     -h, --help      :  help
     -v              :  version
     -s              :  silent
@@ -140,6 +163,7 @@ expected: |
     -m              :  meta-validation mode
     -t              :  expand tab character automatically
     -l              :  show linenumber when errored (experimental)
+    -E              :  show errors in emacs-style (implies '-l')
 #
 ---
 name:  silent1
@@ -249,7 +273,7 @@ schema: |
     - type:   str
 document: |
 expected: |
-  meta1.schema: ok.
+  meta1.schema#0: valid.
 #
 ---
 name:  meta2
@@ -262,9 +286,35 @@ schema: |
     - type:   str
 document: |
 expected: |
-  meta2.schema: NG!
+  meta2.schema#0: INVALID
     - [/] type 'map' requires 'mapping:'.
     - [/] 'sequence:': not available with mapping.
+#
+---
+name:  emacs
+desc:  show errors in emacs style
+method: execute
+args:  [ -Ef, emacs.schema, emacs.document ]
+schema: |
+  type:   seq
+  sequence:
+    - type:   map
+      mapping:
+       "key":   { type: str, required: yes }
+       "value": { type: any }
+document: |
+  - key: one
+    value: 1
+  - key: 2
+    val: two
+  - kye: three
+    value:
+expected: |
+  emacs.document#0: INVALID
+  emacs.document:3: [/1/key] '2': not a string.
+  emacs.document:4: [/1/val] key 'val:' is undefined.
+  emacs.document:5: [/2] key 'key:' is required.
+  emacs.document:5: [/2/kye] key 'kye:' is undefined.
 #
 
 ###

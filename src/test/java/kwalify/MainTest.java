@@ -2,15 +2,12 @@ package kwalify;
 
 import junit.framework.TestCase;
 import junit.textui.TestRunner;
-import kwalify.*;
-import java.util.*;
-import java.text.*;
 import java.lang.reflect.*;
 import java.io.*;
 
 /**
- *  @revision    $Rev: 3 $
- *  @release     $Release: 0.5.0 $
+ *  @revision    $Rev: 4 $
+ *  @release     $Release: 0.5.1 $
  *  @copyright   copyright(c) 2005 kuwata-lab all rights reserved.
  */
 public class MainTest extends TestCase {
@@ -185,7 +182,7 @@ public class MainTest extends TestCase {
     /** test Main#parseOptions() */
     public void testParseoptions1() throws Exception {
         _name = "parseOptions1";
-        _args = new String[] {"-hvsmtlDf", "schema.yaml", "document.yaml", "document2.yaml"};
+        _args = new String[] {"-hvsmtlEDf", "schema.yaml", "document.yaml", "document2.yaml"};
         _inspect = ""
             + "command       : kwalify\n"
             + "flag_help     : true\n"
@@ -193,6 +190,7 @@ public class MainTest extends TestCase {
             + "flag_silent   : true\n"
             + "flag_meta     : true\n"
             + "flag_untabify : true\n"
+            + "flag_emacs    : true\n"
             + "flag_linenum  : true\n"
             + "flag_debug    : true\n"
             + "schema_filename : schema.yaml\n"
@@ -215,6 +213,7 @@ public class MainTest extends TestCase {
             + "flag_silent   : false\n"
             + "flag_meta     : false\n"
             + "flag_untabify : false\n"
+            + "flag_emacs    : false\n"
             + "flag_linenum  : true\n"
             + "flag_debug    : false\n"
             + "schema_filename : schema.yaml\n"
@@ -235,11 +234,34 @@ public class MainTest extends TestCase {
             + "flag_silent   : false\n"
             + "flag_meta     : false\n"
             + "flag_untabify : false\n"
+            + "flag_emacs    : false\n"
             + "flag_linenum  : false\n"
             + "flag_debug    : false\n"
             + "schema_filename : null\n"
             + "properties:\n"
             + "  help: true\n"
+            + "filenames:\n"
+            + "  - document.yaml\n"
+            ;
+        doParseOptionsTest();
+    }
+
+    /** '-E' turns on '-l' */
+    public void testParseoptions4() throws Exception {
+        _name = "parseOptions4";
+        _args = new String[] {"-E", "document.yaml"};
+        _inspect = ""
+            + "command       : kwalify\n"
+            + "flag_help     : false\n"
+            + "flag_version  : false\n"
+            + "flag_silent   : false\n"
+            + "flag_meta     : false\n"
+            + "flag_untabify : false\n"
+            + "flag_emacs    : true\n"
+            + "flag_linenum  : true\n"
+            + "flag_debug    : false\n"
+            + "schema_filename : null\n"
+            + "properties:\n"
             + "filenames:\n"
             + "  - document.yaml\n"
             ;
@@ -287,7 +309,7 @@ public class MainTest extends TestCase {
     public void testVersion() throws Exception {
         _name = "version";
         _args = new String[] {"-vt", "document.yaml"};
-        _expected = "0.0.0\n";
+        _expected = "0.5.1\n";
         doExecuteTest();
     }
 
@@ -295,7 +317,7 @@ public class MainTest extends TestCase {
     public void testHelp() throws Exception {
         _name = "help";
         _args = new String[] {"-hD", "document.yaml"};
-        _expected = "Usage1: kwalify [-hvstl] -f schema.yaml document.yaml [document2.yaml ...]\nUsage2: kwalify [-hvstl] -m schema.yaml [schema2.yaml ...]\n  -h, --help      :  help\n  -v              :  version\n  -s              :  silent\n  -f schema.yaml  :  schema definition file\n  -m              :  meta-validation mode\n  -t              :  expand tab character automatically\n  -l              :  show linenumber when errored (experimental)\n";
+        _expected = "Usage1: kwalify [-hvstlE] -f schema.yaml doc.yaml [doc2.yaml ...]\nUsage2: kwalify [-hvstlE] -m schema.yaml [schema2.yaml ...]\n  -h, --help      :  help\n  -v              :  version\n  -s              :  silent\n  -f schema.yaml  :  schema definition file\n  -m              :  meta-validation mode\n  -t              :  expand tab character automatically\n  -l              :  show linenumber when errored (experimental)\n  -E              :  show errors in emacs-style (implies '-l')\n";
         doExecuteTest();
     }
 
@@ -344,7 +366,7 @@ public class MainTest extends TestCase {
     public void testMeta1() throws Exception {
         _name = "meta1";
         _args = new String[] {"-m", "meta1.schema"};
-        _expected = "meta1.schema: ok.\n";
+        _expected = "meta1.schema#0: valid.\n";
         _schema = "type:   seq\nsequence:\n  - type:   str\n";
         _document = "";
         doExecuteTest();
@@ -354,9 +376,19 @@ public class MainTest extends TestCase {
     public void testMeta2() throws Exception {
         _name = "meta2";
         _args = new String[] {"-m", "meta2.schema"};
-        _expected = "meta2.schema: NG!\n  - [/] type 'map' requires 'mapping:'.\n  - [/] 'sequence:': not available with mapping.\n";
+        _expected = "meta2.schema#0: INVALID\n  - [/] type 'map' requires 'mapping:'.\n  - [/] 'sequence:': not available with mapping.\n";
         _schema = "type:   map\nsequence:\n  - type:   str\n";
         _document = "";
+        doExecuteTest();
+    }
+
+    /** show errors in emacs style */
+    public void testEmacs() throws Exception {
+        _name = "emacs";
+        _args = new String[] {"-Ef", "emacs.schema", "emacs.document"};
+        _expected = "emacs.document#0: INVALID\nemacs.document:3: [/1/key] '2': not a string.\nemacs.document:4: [/1/val] key 'val:' is undefined.\nemacs.document:5: [/2] key 'key:' is required.\nemacs.document:5: [/2/kye] key 'kye:' is undefined.\n";
+        _schema = "type:   seq\nsequence:\n  - type:   map\n    mapping:\n     \"key\":   { type: str, required: yes }\n     \"value\": { type: any }\n";
+        _document = "- key: one\n  value: 1\n- key: 2\n  val: two\n- kye: three\n  value:\n";
         doExecuteTest();
     }
 

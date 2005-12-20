@@ -1,5 +1,5 @@
 /*
- * @(#)Rule.java	$Rev: 3 $ $Release: 0.5.0 $
+ * @(#)Rule.java	$Rev: 4 $ $Release: 0.5.1 $
  *
  * copyright(c) 2005 kuwata-lab all rights reserved.
  */
@@ -20,8 +20,8 @@ import java.util.regex.PatternSyntaxException;
  *  rule for validation.
  *  Validator class generates rule instances.
  *
- *  @revision    $Rev: 3 $
- *  @release     $Release: 0.5.0 $
+ *  @revision    $Rev: 4 $
+ *  @release     $Release: 0.5.1 $
  */
 public class Rule {
 
@@ -561,7 +561,7 @@ public class Rule {
         StringBuffer sb = new StringBuffer();
         int level = 0;
         Map done = new IdentityHashMap();
-        inspect(sb, 0, done);
+        inspect(sb, level, done);
         return sb.toString();
     }
 

@@ -1,5 +1,5 @@
 /*
- * @(#)DefaultableHashMap.java	$Rev: 3 $ $Release: 0.5.0 $
+ * @(#)DefaultableHashMap.java	$Rev: 4 $ $Release: 0.5.1 $
  *
  * copyright(c) 2005 kuwata-lab all rights reserved.
  */
@@ -12,10 +12,13 @@ import java.util.HashMap;
 /**
  * hash map which can have default value
  * 
- * @revision    $Rev: 3 $
- * @release     $Release: 0.5.0 $
+ * @revision    $Rev: 4 $
+ * @release     $Release: 0.5.1 $
  */
 public class DefaultableHashMap extends HashMap implements Defaultable {
+
+    private static final long serialVersionUID = -5224819562023897380L;
+
     private Object _default = null;
 
     public DefaultableHashMap() {

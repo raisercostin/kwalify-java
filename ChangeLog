@@ -1,0 +1,15 @@
+title:      ChangeLog
+version:    $Rev: 4 $
+copyright:  copyright(c) 2005 kuwata-lab all rights reserved.
+
+releases:
+
+  - release: 0.5.1
+    date:    2005-12-20
+    changes:
+      - [enhance] add new command-line option '-E' which shows errors in emacs-compatible format.
+
+  - release: 0.5.0
+    date:    2005-12-17
+    changes:
+      - first release

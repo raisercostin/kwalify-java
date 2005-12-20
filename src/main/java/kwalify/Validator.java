@@ -1,5 +1,5 @@
 /*
- * @(#)Validator.java	$Rev: 3 $ $Release: 0.5.0 $
+ * @(#)Validator.java	$Rev: 3 $ $Release: 0.5.1 $
  *
  * copyright(c) 2005 kuwata-lab all rights reserved.
  */
@@ -47,7 +47,7 @@ import java.util.Iterator;
  *  </pre>
  *
  *  @version   $Rev: 3 $
- *  @release   $Release: 0.5.0 $
+ *  @release   $Release: 0.5.1 $
  */
 public class Validator {
     private Rule _rule;

@@ -1,5 +1,5 @@
 /*
- * @(#)BaseException.java	$Rev: 3 $ $Release: 0.5.0 $
+ * @(#)BaseException.java	$Rev: 3 $ $Release: 0.5.1 $
  *
  * copyright(c) 2005 kuwata-lab all rights reserved.
  */
@@ -10,7 +10,7 @@ package kwalify;
  * base class of ValidationException and SchemaException.
  * 
  * @revision    $Rev: 3 $
- * @release     $Release: 0.5.0 $
+ * @release     $Release: 0.5.1 $
  */
 public abstract class BaseException extends KwalifyRuntimeException implements Comparable {
 

@@ -2,12 +2,11 @@ package kwalify;
 
 import junit.framework.TestCase;
 import junit.textui.TestRunner;
-import kwalify.*;
 import java.util.*;
 
 /**
- *  @revision    $Rev: 1 $
- *  @release     $Release: 0.5.0 $
+ *  @revision    $Rev: 4 $
+ *  @release     $Release: 0.5.1 $
  *  @copyright   copyright(c) 2005 kuwata-lab all rights reserved.
  */
 public class RuleTest extends TestCase {
@@ -19,12 +18,12 @@ public class RuleTest extends TestCase {
     private void doTest() throws Exception {
         YamlParser parser = new YamlParser(_input);
         Map schema = (Map)parser.parse();
-        Rule rule;
+        //Rule rule;
         if (_exception_class == null) {
-            rule = new Rule(schema);
+            new Rule(schema);  //rule = new Rule(schema);
         } else {
             try {
-                rule = new Rule(schema);
+                new Rule(schema); // rule = new Rule(schema);
                 fail(_exception_class.getName() + " is expected but not thrown.");
             } catch (Exception ex) {
                 if (ex.getClass() == _exception_class) {

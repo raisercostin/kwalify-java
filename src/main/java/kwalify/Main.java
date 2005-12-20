@@ -1,5 +1,5 @@
 /*
- * @(#)Main.java	$Rev: 3 $ $Release: 0.5.0 $
+ * @(#)Main.java	$Rev: 4 $ $Release: 0.5.1 $
  *
  * copyright(c) 2005 kuwata-lab all rights reserved.
  */
@@ -7,7 +7,6 @@
 package kwalify;
 
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -18,21 +17,25 @@ import java.io.IOException;
 /**
  * class for main program
  * 
- * @revision    $Rev: 3 $
- * @release     $Release: 0.5.0 $
+ * @revision    $Rev: 4 $
+ * @release     $Release: 0.5.1 $
  */
 public class Main {
 
     private String _command;
-    private boolean _flag_help     = false;
-    private boolean _flag_version  = false;
-    private boolean _flag_silent   = false;
-    private boolean _flag_meta     = false;
-    private boolean _flag_untabify = false;
-    private boolean _flag_linenum  = false;
-    private boolean _flag_debug    = false;
-    private String  _schema_filename = null;
+    private boolean _flag_help     = false;  // print help
+    private boolean _flag_version  = false;  // print version
+    private boolean _flag_silent   = false;  // suppress messages
+    private boolean _flag_meta     = false;  // meta validation
+    private boolean _flag_untabify = false;  // expand tab charactor to spaces
+    private boolean _flag_emacs    = false;  // show errors in emacs style
+    private boolean _flag_linenum  = false;  // show line number on where errors happened
+    private boolean _flag_debug    = false;  // internal use only
+    private String  _schema_filename = null; // schema filename
     private Map _properties = new HashMap();
+
+
+    boolean isDebug() { return _flag_debug; }
 
 
     public String inspect() {
@@ -43,6 +46,7 @@ public class Main {
         sb.append("flag_silent   : ").append(_flag_silent   ).append('\n');
         sb.append("flag_meta     : ").append(_flag_meta     ).append('\n');
         sb.append("flag_untabify : ").append(_flag_untabify ).append('\n');
+        sb.append("flag_emacs    : ").append(_flag_emacs    ).append('\n');
         sb.append("flag_linenum  : ").append(_flag_linenum  ).append('\n');
         sb.append("flag_debug    : ").append(_flag_debug    ).append('\n');
         sb.append("schema_filename : ").append(_schema_filename).append('\n');
@@ -55,10 +59,11 @@ public class Main {
         return sb.toString();
     }
 
-    private static final String REVISION = "$Release: 0.5.0 $";
+
+    private static final String REVISION = "$Release: 0.5.1 $";
     private static final String HELP = ""
-        + "Usage1: %s [-hvstl] -f schema.yaml document.yaml [document2.yaml ...]\n"
-        + "Usage2: %s [-hvstl] -m schema.yaml [schema2.yaml ...]\n"
+        + "Usage1: %s [-hvstlE] -f schema.yaml doc.yaml [doc2.yaml ...]\n"
+        + "Usage2: %s [-hvstlE] -m schema.yaml [schema2.yaml ...]\n"
         + "  -h, --help      :  help\n"
         + "  -v              :  version\n"
         + "  -s              :  silent\n"
@@ -66,6 +71,7 @@ public class Main {
         + "  -m              :  meta-validation mode\n"
         + "  -t              :  expand tab character automatically\n"
         + "  -l              :  show linenumber when errored (experimental)\n"
+        + "  -E              :  show errors in emacs-style (implies '-l')\n"
         ;
 
 
@@ -99,7 +105,7 @@ public class Main {
         } else if (_flag_debug) {
             s = inspectSchemaFile(_schema_filename);
         } else {
-            s = validate(_schema_filename, filenames);
+            s = validate(filenames, _schema_filename);
         }
 
         //
@@ -110,7 +116,7 @@ public class Main {
     private String[] parseOptions(String[] args) throws CommandOptionException {
         Object[] ret = null;
         try {
-            ret = Util.parseCommandOptions(args, "hvsmtlD", "f", null);
+            ret = Util.parseCommandOptions(args, "hvsmtlED", "f", null);
         } catch (CommandOptionException ex) {
             String error_symbol = ex.getErrorSymbol();
             if (error_symbol.equals("command.option.noarg")) {
@@ -132,9 +138,11 @@ public class Main {
         _flag_silent   = options.get("s") != null;
         _flag_meta     = options.get("m") != null;
         _flag_untabify = options.get("t") != null;
-        _flag_linenum  = options.get("l") != null;
+        _flag_emacs    = options.get("E") != null;
+        _flag_linenum  = options.get("l") != null || _flag_emacs;
         _flag_debug    = options.get("D") != null;
         _schema_filename = (String)options.get("f");
+        //
         //
         _properties = properties;
         if (_properties.get("help") != null) {
@@ -145,133 +153,91 @@ public class Main {
     }
 
 
-    private String validate(String schema_filename, String[] filenames) throws IOException, SyntaxException {
-        // load schema
+    private String validate(String[] filenames, String schema_filename) throws IOException, SyntaxException {
         String str = Util.readFile(schema_filename);
         if (_flag_untabify) {
             str = Util.untabify(str);
         }
         YamlParser parser = new YamlParser(str);
         Object schema = parser.parse();
-
-        // create validator
         Validator validator = new Validator(schema);
+        String s = validateFiles(validator, filenames);
+        return s;
+    }
 
-        // validate files
+
+    private String validateFiles(Validator validator, String[] filenames) throws IOException, SyntaxException {
         if (filenames.length == 0) {
             filenames = new String[] { null };
         }
         StringBuffer sb = new StringBuffer();
-        for (int i = 0; i < filenames.length; i++) {
-            String filename = filenames[i];
-            String result = validateFile(validator, filename, "validation.valid", "validation.invalid");
-            sb.append(result);
-        }
-
-        //
-        return sb.toString();
-    }
-
-
-    private String validateFile(Validator validator, String filename, String valid_msg_key, String invalid_msg_key) throws IOException, SyntaxException {
-
-        // read file content
-        String str;
-        if (filename == null) {
-            str = Util.readInputStream(System.in);
-            filename = "(stdin)";
-        } else {
-            str = Util.readFile(filename);
-        }
-        if (_flag_untabify) {
-            str = Util.untabify(str);
-        }
-
-        //
-        StringBuffer sb = new StringBuffer();
-        YamlParser parser = new YamlParser(str);
-        for (int i = 0; parser.hasNext(); i++) {
-            Object doc = parser.parse();
-            List errors = validator.validate(doc);
-            Object[] args = new Object[] { filename, new Integer(i) };
-            String msg;
-            if (errors == null || errors.size() == 0) {
-                if (! _flag_silent) {
-                    msg = Messages.buildMessage(valid_msg_key, args);
-                    sb.append(msg).append('\n');
-                }
+        for (int j = 0; j < filenames.length; j++) {
+            String filename = filenames[j];
+            String str = null;
+            if (filename == null) {
+                str = Util.readInputStream(System.in);
+                filename = "(stdin)";
             } else {
-                msg = Messages.buildMessage(invalid_msg_key, args);
-                sb.append(msg).append('\n');
-                appendErrors(sb, errors, parser);
+                str = Util.readFile(filename);
+            }
+            if (_flag_untabify) {
+                str = Util.untabify(str);
+            }
+            YamlParser parser = new YamlParser(str);
+            int i = 0;
+            while (parser.hasNext()) {
+                Object doc = parser.parse();
+                validateDocument(sb, validator, doc, filename, i, parser);
+                i++;
             }
         }
         return sb.toString();
     }
 
 
-    private void appendErrors(StringBuffer sb, List errors, YamlParser parser) {
-        if (parser != null) {
-            parser.setErrorsLineNumber(errors);
-            Collections.sort(errors);
+    private void validateDocument(StringBuffer sb, Validator validator, Object doc, String filename, int i, YamlParser parser) {
+        if (doc == null) {
+            Object[] args = { filename, new Integer(i) };
+            String msg = Messages.buildMessage("validation.empty", null, args);
+            sb.append(msg).append('\n');
+            return;
         }
-        for (Iterator it = errors.iterator(); it.hasNext(); ) {
-            ValidationException ex = (ValidationException)it.next();
-            sb.append("  - ");
-            if (_flag_linenum) {
-                sb.append("(line ").append(ex.getLineNumber()).append(") ");
+        List errors = validator.validate(doc);
+        Object[] args = { filename, new Integer(i) };
+        if (errors == null || errors.size() == 0) {
+            if (! _flag_silent) {
+                String msg = Messages.buildMessage("validation.valid", args);
+                sb.append(msg).append('\n');
             }
-            sb.append("[").append(ex.getPath()).append("] ");
-            sb.append(ex.getMessage()).append('\n');
+        } else {
+            String msg = Messages.buildMessage("validation.invalid", args);
+            sb.append(msg).append('\n');
+            if (_flag_linenum) {
+                assert parser != null;
+                parser.setErrorsLineNumber(errors);
+                Collections.sort(errors);
+            }
+            for (Iterator it = errors.iterator(); it.hasNext(); ) {
+                ValidationException error = (ValidationException)it.next();
+                if (_flag_emacs) {
+                    assert _flag_linenum;
+                    sb.append(filename).append(":").append(error.getLineNumber()).append(":");
+                } else if (_flag_linenum) {
+                    sb.append("  - (line ").append(error.getLineNumber()).append(")");
+                } else {
+                    sb.append("  -");
+                }
+                sb.append(" [").append(error.getPath()).append("] ").append(error.getMessage()).append('\n');
+            }
         }
     }
 
 
     private String metaValidate(String[] filenames) throws IOException, SyntaxException {
         Validator meta_validator = MetaValidator.instance();
-        StringBuffer sb = new StringBuffer();
-        for (int i = 0; i < filenames.length; i++) {
-            //String s = metaValidate(meta_validator, filenames[i]);
-            String s = validateFile(meta_validator, filenames[i], "meta.valid", "meta.invalid");
-            sb.append(s);
-        }
-        return sb.toString();
+        String s = validateFiles(meta_validator, filenames);
+        return s;
     }
-
-
-/*
-    private String metaValidate(Validator meta_validator, String filename) throws IOException, SyntaxException {
-        // read schema file
-        String str;
-        if (filename == null) {
-            str = Util.readInputStream(System.in);
-            filename = "(stdin)";
-        } else {
-            str = Util.readFile(filename);
-        }
-
-        //
-        StringBuffer sb = new StringBuffer();
-        sb.append(filename).append(": ");
-
-        // parse schema
-        YamlParser parser = new YamlParser(str);
-        Object schema = parser.parse();
-        if (schema == null) {
-            sb.append(Messages.message("meta.empty"));
-            return sb.toString();
-        }
-
-        // meta-validation
-        List errors = meta_validator.validate(schema);
-        if (errors == null && errors.size() == 0) {
-            sb.append(Messages.message("meta.valid"));
-        } else {
-            appendErrors(sb, errors, parser);
-        }
-        return sb.toString();
-    }
-*/
 
 
     private String inspectSchemaFile(String schema_filename) throws IOException, SyntaxException {
@@ -292,7 +258,8 @@ public class Main {
 
 
     private static CommandOptionException optionError(String error_symbol, char option) {
-        String message = Messages.buildMessage(error_symbol, null, new Object[] { Character.toString(option) });
+        Object[] args = { Character.toString(option) };
+        String message = Messages.buildMessage(error_symbol, null, args);
         return new CommandOptionException(message, option, error_symbol);
     }
 
@@ -306,26 +273,31 @@ public class Main {
 
 
     private String help() {
-        String help = HELP.replaceAll("%s", _command);
-        return help;
+        String help_msg = Messages.buildMessage("command.help", null, new Object[] { _command, _command });
+        //String help = HELP.replaceAll("%s", _command);
+        return help_msg;
     }
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         int status = 0;
+        Main main = null;
         try {
-            Main main = new Main("kwalify-java");
+            main = new Main("kwalify-java");
             String result = main.execute(args);
-            System.out.println(result);
-        } catch (IOException ex) {
-            System.err.println("ERROR: " + ex.getMessage());
-            status = 1;
-        } catch (CommandOptionException ex) {
-            System.err.println("ERROR: " + ex.getMessage());
-            status = 1;
-        } catch (SyntaxException ex) {
-            System.err.println("ERROR: " + ex.getMessage());
-            status = 1;
+            if (result != null) {
+                System.out.println(result);
+            }
+        } catch (Exception ex) {
+            if (main != null && main.isDebug()) {
+                throw ex;
+            }
+            if (    ex instanceof CommandOptionException
+                 || ex instanceof SyntaxException
+                 || ex instanceof IOException) {
+                System.err.println("ERROR: " + ex.getMessage());
+                status = 1;
+            }
         }
         System.exit(status);
     }

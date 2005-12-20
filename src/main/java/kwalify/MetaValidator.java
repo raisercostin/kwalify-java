@@ -1,5 +1,5 @@
 /*
- * @(#)MetaValidator.java	$Rev: 3 $ $Release: 0.5.0 $
+ * @(#)MetaValidator.java	$Rev: 4 $ $Release: 0.5.1 $
  *
  * copyright(c) 2005 kuwata-lab all rights reserved.
  */
@@ -16,8 +16,8 @@ import java.util.regex.PatternSyntaxException;
 /**
  *  meta validator to validate schema definition
  *
- *  @revision    $Rev: 3 $
- *  @release     $Release: 0.5.0 $
+ *  @revision    $Rev: 4 $
+ *  @release     $Release: 0.5.1 $
  */
 public class MetaValidator extends Validator {
 
@@ -169,7 +169,7 @@ public class MetaValidator extends Validator {
         if (type == null) {
             type = Types.getDefaultType();
         }
-        Class type_class = Types.typeClass(type);
+        //Class type_class = Types.typeClass(type);
         //if (type_class == null) {
         //    errors.add(validationError("type.unknown", rule, path + "/type", type, null));
         //}
@@ -206,7 +206,8 @@ public class MetaValidator extends Validator {
         //String assert_str;
         //if ((assert_str = (String)map.get("assert")) != null) {
         if (map.containsKey("assert")) {
-            String assert_str = (String)map.get("assert");
+            System.err.println("*** warning: sorry, 'assert:' is not supported in current version of Kwalify-java.");
+            //String assert_str = (String)map.get("assert");
             //if (! Util.matches(assert_str, "\\bval\\b")) {
             //    errors.add(validationError("assert.noval", rule, path + "/assert", assert_str, null);
             //}

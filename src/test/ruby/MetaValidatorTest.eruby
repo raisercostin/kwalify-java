@@ -7,7 +7,7 @@ import java.text.*;
 
 /**
  *  @revision    $Rev: 2 $
- *  @release     $Release: 0.5.0 $
+ *  @release     $Release: 0.5.1 $
  *  @copyright   copyright(c) 2005 kuwata-lab all rights reserved.
  */
 public class MetaValidatorTest extends TestCase {

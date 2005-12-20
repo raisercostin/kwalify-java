@@ -1,5 +1,5 @@
 /*
- * @(#)YamlUtil.java	$Rev: 3 $ $Release: 0.5.0 $
+ * @(#)YamlUtil.java	$Rev: 3 $ $Release: 0.5.1 $
  *
  * copyright(c) 2005 kuwata-lab all rights reserved.
  */
@@ -16,7 +16,7 @@ import java.io.IOException;
  *  utilify class for yaml.
  *
  *  @version   $Rev: 3 $
- *  @release   $Release: 0.5.0 $
+ *  @release   $Release: 0.5.1 $
  */
 public class YamlUtil {
 

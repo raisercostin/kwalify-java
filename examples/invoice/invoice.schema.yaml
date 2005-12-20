@@ -2,8 +2,8 @@
 ### Kwalify schema example for invoice
 ###
 ### $Rev: 3 $
-### $Release$
-### $Copyright$
+### $Release: 0.5.1 $
+### copyright(c) 2005 kuwata-lab all rights reserved.
 ###
 
 type:      map

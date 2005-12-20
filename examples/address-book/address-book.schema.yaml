@@ -1,8 +1,8 @@
 ##
 ## Kwalify schema example for address book
 ##
-## $Release$
-## $Copyright$
+## $Release: 0.5.1 $
+## copyright(c) 2005 kuwata-lab all rights reserved.
 ##
 ##
 ## NOTE: 'type:  str' is omitted in this example because 'str' is default type.

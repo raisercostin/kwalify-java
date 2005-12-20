@@ -1,5 +1,5 @@
 /*
- * @(#)Types.java	$Rev: 3 $ $Release: 0.5.0 $
+ * @(#)Types.java	$Rev: 4 $ $Release: 0.5.1 $
  *
  * copyright(c) 2005 kuwata-lab all rights reserved.
  */
@@ -9,15 +9,13 @@ package kwalify;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Date;
 
 /**
  * utility methods for type (str, int, ...).
  *
- * @revision    $Rev: 3 $
- * @release     $Release: 0.5.0 $
+ * @revision    $Rev: 4 $
+ * @release     $Release: 0.5.1 $
  */
 public class Types {
 

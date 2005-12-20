@@ -2,12 +2,10 @@ package kwalify;
 
 import junit.framework.TestCase;
 import junit.textui.TestRunner;
-import kwalify.*;
-import java.util.*;
 
 /**
- *  @revision    $Rev: 2 $
- *  @release     $Release: 0.5.0 $
+ *  @revision    $Rev: 4 $
+ *  @release     $Release: 0.5.1 $
  *  @copyright   copyright(c) 2005 kuwata-lab all rights reserved.
  */
 public class YamlParserTest extends TestCase {

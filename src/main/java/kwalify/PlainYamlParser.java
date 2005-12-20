@@ -1,19 +1,17 @@
 /*
- * @(#)PlainYamlParser.java	$Rev: 3 $ $Release: 0.5.0 $
+ * @(#)PlainYamlParser.java	$Rev: 4 $ $Release: 0.5.1 $
  *
  * copyright(c) 2005 kuwata-lab all rights reserved.
  */
 
 package kwalify;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.Calendar;
 import java.util.Date;
@@ -29,8 +27,8 @@ import java.util.TimeZone;
  *  Object doc = parser.parse();
  * </pre>
  *
- * @revision    $Rev: 3 $
- * @release     $Release: 0.5.0 $
+ * @revision    $Rev: 4 $
+ * @release     $Release: 0.5.1 $
  */
 public class PlainYamlParser implements Parser {
 
@@ -59,7 +57,6 @@ public class PlainYamlParser implements Parser {
     private Object _end_flag = null;
     private String _sbuf = null;
     private int _index = 0;
-    private Map _resolved = null;
 
     public PlainYamlParser(String yaml_str) {
         // split yaml_str into _lines
@@ -177,20 +174,19 @@ public class PlainYamlParser implements Parser {
 
     protected String getLine() {
         String line;
-        Matcher m;
         do {
             line = _getLine_();
-        } while (line != null && matches(line, "^\\s*($|#)"));
+        } while (line != null && Util.matches(line, "^\\s*($|#)"));
         return line;
     }
 
     protected String _getLine_() {
         if (++_linenum < _lines.length) {
             _line = _lines[_linenum];
-            if (matches(_line, "^\\.\\.\\.$")) {
+            if (Util.matches(_line, "^\\.\\.\\.$")) {
                 _line = null;
                 _end_flag = ENDFLAG_DOC_END;
-            } else if (matches(_line, "^---( [!%].*)?$")) {
+            } else if (Util.matches(_line, "^---( [!%].*)?$")) {
                 _line = null;
                 _end_flag = ENDFLAG_DOC_BEGIN;
             }
@@ -252,30 +248,12 @@ public class PlainYamlParser implements Parser {
         return new SyntaxException(message, _linenum);
     }
 
-    private static HashMap __patterns = new HashMap();
-
-    private Matcher matcher(String target, String regexp) {
-        return Util.matcher(target, regexp);
-        //Pattern pat = (Pattern)__patterns.get(regexp);
-        //if (pat == null) {
-        //    pat = Pattern.compile(regexp);
-        //    __patterns.put(regexp, pat);
-        //}
-        //return pat.matcher(target);
-    }
-
-    private boolean matches(String target, String regexp) {
-        return Util.matches(target, regexp);
-        //Matcher m = matcher(target, regexp);
-        //return m.find();
-    }
-
     private Object parseChild(int column) throws SyntaxException {
         String line = getLine();
         if (line == null) {
             return createScalar(null);
         }
-        Matcher m = matcher(line, "^( *)(.*)");
+        Matcher m = Util.matcher(line, "^( *)(.*)");
         if (! m.find()) {
             assert false;
             return null;
@@ -290,21 +268,21 @@ public class PlainYamlParser implements Parser {
 
     private Object parseValue(int column, String value, int value_start_column) throws SyntaxException {
         Object data;
-        if        (matches(value, "^-( |$)")) {
+        if        (Util.matches(value, "^-( |$)")) {
             data = parseSequence(value_start_column, value);
-        } else if (matches(value, "^((?::?[-.\\w]+|'.*?'|\".*?\"|=|<<) *):(( +)(.*))?$")) {
+        } else if (Util.matches(value, "^((?::?[-.\\w]+|'.*?'|\".*?\"|=|<<) *):(( +)(.*))?$")) {
             data = parseMapping(value_start_column, value);
-        } else if (matches(value, "^[\\[\\{]")) {
+        } else if (Util.matches(value, "^[\\[\\{]")) {
             data = parseFlowStyle(column, value);
-        } else if (matches(value, "^\\&[-\\w]+( |$)")) {
+        } else if (Util.matches(value, "^\\&[-\\w]+( |$)")) {
             data = parseAnchor(column, value);
-        } else if (matches(value, "^\\*[-\\w]+( |$)")) {
+        } else if (Util.matches(value, "^\\*[-\\w]+( |$)")) {
             data = parseAlias(column, value);
-        } else if (matches(value, "^[|>]")) {
+        } else if (Util.matches(value, "^[|>]")) {
             data = parseBlockText(column, value);
-        } else if (matches(value, "^!")) {
+        } else if (Util.matches(value, "^!")) {
             data = parseTag(column, value);
-        } else if (matches(value, "^\\#")) {
+        } else if (Util.matches(value, "^\\#")) {
             data = parseChild(column);
         } else {
             data = parseScalar(column, value);
@@ -444,8 +422,8 @@ public class PlainYamlParser implements Parser {
     }
 
     private Object parseTag(int column, String value) throws SyntaxException {
-        assert matches(value, "^!\\S+");
-        Matcher m = matcher(value, "^!(\\S+)((\\s+)(.*))?$");
+        assert Util.matches(value, "^!\\S+");
+        Matcher m = Util.matcher(value, "^!(\\S+)((\\s+)(.*))?$");
         if (! m.find()) {
             assert false;
             return null;
@@ -464,9 +442,8 @@ public class PlainYamlParser implements Parser {
     }
 
     private Object parseAnchor(int column, String value) throws SyntaxException {
-        assert value.matches("^\\&([-\\w]+)(( *)(.*))?$");
-        Pattern pat = Pattern.compile("^\\&([-\\w]+)(( *)(.*))?$");
-        Matcher m = pat.matcher(value);
+        assert Util.matches(value, "^\\&([-\\w]+)(( *)(.*))?$");
+        Matcher m = Util.matcher(value, "^\\&([-\\w]+)(( *)(.*))?$");
         if (! m.find()) {
             assert false;
             return null;
@@ -494,13 +471,13 @@ public class PlainYamlParser implements Parser {
 
     private Object parseAlias(int column, String value) throws SyntaxException {
         assert value.matches("^\\*([-\\w]+)(( *)(.*))?$");
-        Matcher m = matcher(value, "^\\*([-\\w]+)(( *)(.*))?$");
+        Matcher m = Util.matcher(value, "^\\*([-\\w]+)(( *)(.*))?$");
         if (! m.find()) {
             assert false;
             return null;
         }
         String label  = m.group(1);
-        String sapce  = m.group(3);
+        //String space  = m.group(3);
         String value2 = m.group(4);
         if (value2 != null && value2.length() > 0 && value2.charAt(0) != '#') {
             throw syntaxError("alias cannot take any data.");
@@ -593,8 +570,8 @@ public class PlainYamlParser implements Parser {
 
 /*
     private Object parseBlockText(int column, String value) throws SyntaxException {
-        assert matches(value, "^[>|\\|]");
-        Matcher m = matcher(value, "^([>|\\|])([-+]?)\\s*(.*)$");
+        assert Util.matches(value, "^[>|\\|]");
+        Matcher m = Util.matcher(value, "^([>|\\|])([-+]?)\\s*(.*)$");
         if (! m.find()) {
             assert false;
             return null;
@@ -657,14 +634,14 @@ public class PlainYamlParser implements Parser {
             }
             s = sb2.toString();
         }
-        if (currentLine() != null && matches(currentLine(), "^\\s*#")) getLine();
+        if (currentLine() != null && Util.matches(currentLine(), "^\\s*#")) getLine();
         return createScalar(text + s);
     }
 */
 
     private Object parseBlockText(int column, String value) throws SyntaxException {
-        assert matches(value, "^[>|]");
-        Matcher m = matcher(value, "^([>|])([-+]?)(\\d*)\\s*(.*)$");
+        assert Util.matches(value, "^[>|]");
+        Matcher m = Util.matcher(value, "^([>|])([-+]?)(\\d*)\\s*(.*)$");
         if (! m.find()) {
             assert false;
             return null;
@@ -678,7 +655,7 @@ public class PlainYamlParser implements Parser {
         StringBuffer sb = new StringBuffer();
         int n = 0;
         while ((line = _getLine_()) != null) {
-            m = matcher(line, "^( *)(.*)$");
+            m = Util.matcher(line, "^( *)(.*)$");
             m.find();
             String space = m.group(1);
             String str   = m.group(2);
@@ -711,7 +688,7 @@ public class PlainYamlParser implements Parser {
                 }
             }
         }
-        if (line != null && matches(line, "^ *#")) {
+        if (line != null && Util.matches(line, "^ *#")) {
             getLine();
         }
         switch (indicator) {
@@ -740,10 +717,10 @@ public class PlainYamlParser implements Parser {
 
 
     private List parseSequence(int column, String value) throws SyntaxException {
-        assert matches(value, "^-(( +)(.*))?$");
+        assert Util.matches(value, "^-(( +)(.*))?$");
         List seq = createSequence(_linenum);
         while (true) {
-            Matcher m = matcher(value, "^-(( +)(.*))?$");
+            Matcher m = Util.matcher(value, "^-(( +)(.*))?$");
             if (! m.find()) {
                 throw syntaxError("sequence item is expected.");
             }
@@ -763,7 +740,7 @@ public class PlainYamlParser implements Parser {
             //
             String line = currentLine();
             if (line == null) break;
-            Matcher m2 = matcher(line, "^( *)(.*)");
+            Matcher m2 = Util.matcher(line, "^( *)(.*)");
             m2.find();
             int indent = m2.group(1).length();
             if (indent < column) {
@@ -778,10 +755,10 @@ public class PlainYamlParser implements Parser {
 
 
     private Map parseMapping(int column, String value) throws SyntaxException {
-        assert matches(value, "^((?::?[-.\\w]+|'.*?'|\".*?\"|=|<<) *):(( +)(.*))?$");
+        assert Util.matches(value, "^((?::?[-.\\w]+|'.*?'|\".*?\"|=|<<) *):(( +)(.*))?$");
         Map map = createMapping(_linenum);
         while (true) {
-            Matcher m = matcher(value, "^((?::?[-.\\w]+|'.*?'|\".*?\"|=|<<) *):(( +)(.*))?$");
+            Matcher m = Util.matcher(value, "^((?::?[-.\\w]+|'.*?'|\".*?\"|=|<<) *):(( +)(.*))?$");
             if (! m.find()) {
                 throw syntaxError("mapping item is expected.");
             }
@@ -810,7 +787,7 @@ public class PlainYamlParser implements Parser {
             if (line == null) {
                 break;
             }
-            Matcher m2 = matcher(line, "^( *)(.*)");
+            Matcher m2 = Util.matcher(line, "^( *)(.*)");
             m2.find();
             int indent = m2.group(1).length();
             if (indent < column) {
@@ -833,23 +810,23 @@ public class PlainYamlParser implements Parser {
 
     private Object toScalar(String value) {
         Matcher m;
-        if        ((m = matcher(value, "^\"(.*)\"([ \t]*#.*$)?")).find()) {
+        if        ((m = Util.matcher(value, "^\"(.*)\"([ \t]*#.*$)?")).find()) {
             return m.group(1);
-        } else if ((m = matcher(value, "^'(.*)'([ \t]*#.*$)?")).find()) {
+        } else if ((m = Util.matcher(value, "^'(.*)'([ \t]*#.*$)?")).find()) {
             return m.group(1);
-        } else if ((m = matcher(value, "^(.*\\S)[ \t]*#")).find()) {
+        } else if ((m = Util.matcher(value, "^(.*\\S)[ \t]*#")).find()) {
             value = m.group(1);
         }
         //
-        if      (matches(value, "^-?0x\\d+$"))       return new Integer(Integer.parseInt(value, 16));
-        else if (matches(value, "^-?0\\d+$"))        return new Integer(Integer.parseInt(value, 8));
-        else if (matches(value, "^-?\\d+$"))         return new Integer(Integer.parseInt(value, 10));
-        else if (matches(value, "^-?\\d+\\.\\d+$"))  return new Double(Double.parseDouble(value));
-        else if (matches(value, "^(true|yes|on)$"))  return Boolean.TRUE;
-        else if (matches(value, "^(false|no|off)$")) return Boolean.FALSE;
-        else if (matches(value, "^(null|~)$"))       return null;
-        else if (matches(value, "^:(\\w+)$"))        return value;
-        else if ((m = matcher(value, "^(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)$")).find()) {
+        if      (Util.matches(value, "^-?0x\\d+$"))       return new Integer(Integer.parseInt(value, 16));
+        else if (Util.matches(value, "^-?0\\d+$"))        return new Integer(Integer.parseInt(value, 8));
+        else if (Util.matches(value, "^-?\\d+$"))         return new Integer(Integer.parseInt(value, 10));
+        else if (Util.matches(value, "^-?\\d+\\.\\d+$"))  return new Double(Double.parseDouble(value));
+        else if (Util.matches(value, "^(true|yes|on)$"))  return Boolean.TRUE;
+        else if (Util.matches(value, "^(false|no|off)$")) return Boolean.FALSE;
+        else if (Util.matches(value, "^(null|~)$"))       return null;
+        else if (Util.matches(value, "^:(\\w+)$"))        return value;
+        else if ((m = Util.matcher(value, "^(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)$")).find()) {
             int year  = Integer.parseInt(m.group(1));
             int month = Integer.parseInt(m.group(2));
             int day   = Integer.parseInt(m.group(3));
@@ -857,14 +834,14 @@ public class PlainYamlParser implements Parser {
             cal.set(year, month, day, 0, 0, 0);
             Date date = cal.getTime();
             return date;
-        } else if ((m = matcher(value, "^(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)(?:[Tt]|[ \t]+)(\\d\\d?):(\\d\\d):(\\d\\d)(\\.\\d*)?(?:Z|[ \t]*([-+]\\d\\d?)(?::(\\d\\d))?)?$")).find()) {
+        } else if ((m = Util.matcher(value, "^(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d)(?:[Tt]|[ \t]+)(\\d\\d?):(\\d\\d):(\\d\\d)(\\.\\d*)?(?:Z|[ \t]*([-+]\\d\\d?)(?::(\\d\\d))?)?$")).find()) {
             int year    = Integer.parseInt(m.group(1));
             int month   = Integer.parseInt(m.group(2));
             int day     = Integer.parseInt(m.group(3));
             int hour    = Integer.parseInt(m.group(4));
             int min     = Integer.parseInt(m.group(5));
             int sec     = Integer.parseInt(m.group(6));
-            int usec    = Integer.parseInt(m.group(7));
+            //int usec    = Integer.parseInt(m.group(7));
             //int tzone_h = Integer.parseInt(m.group(8));
             //int tzone_m = Integer.parseInt(m.group(9));
             String timezone = "GMT" + m.group(8) + ":" + m.group(9);
